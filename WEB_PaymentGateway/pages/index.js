@@ -1,12 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { products, CATEGORIES, formatRupiah } from '../data/products';
+import { CATEGORIES, formatRupiah } from '../data/products';
 import { useCart } from '../context/CartContext';
 
 export default function Home() {
   const { addToCart, totalItems } = useCart();
   const [activeCategory, setActiveCategory] = useState('All');
   const [search, setSearch] = useState('');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch products dari MongoDB
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        setLoading(true);
+        const res = await fetch('/api/products');
+        const json = await res.json();
+        if (json.success) {
+          // Normalize _id jadi id (biar cart context tetep works)
+          const normalized = json.data.map((p) => ({
+            ...p,
+            id: p._id,
+          }));
+          setProducts(normalized);
+        } else {
+          setError(json.error || 'Failed to load products');
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchProducts();
+  }, []);
 
   const filtered = products.filter((p) => {
     const matchCat = activeCategory === 'All' || p.category === activeCategory;
@@ -74,51 +103,69 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Product Grid */}
+      {/* Content */}
       <main className="max-w-md mx-auto px-4 py-4 pb-24">
-        <h3 className="text-sm font-semibold text-gray-500 mb-3">
-          {filtered.length} menu tersedia
-        </h3>
-        <div className="grid grid-cols-2 gap-3">
-          {filtered.map((p) => (
-            <div
-              key={p.id}
-              className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col"
-            >
-              <div className="h-24 bg-orange-100 flex items-center justify-center text-5xl">
-                {p.image}
-              </div>
-              <div className="p-3 flex-1 flex flex-col">
-                <h4 className="font-semibold text-sm text-gray-800">
-                  {p.name}
-                </h4>
-                <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
-                  {p.description}
-                </p>
-                <div className="mt-auto pt-2 flex items-center justify-between">
-                  <span className="text-sm font-bold text-orange-600">
-                    {formatRupiah(p.price)}
-                  </span>
-                  <button
-                    onClick={() => addToCart(p)}
-                    className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition"
-                  >
-                    + Add
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {loading && (
+          <div className="text-center py-20">
+            <div className="inline-block w-8 h-8 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin"></div>
+            <p className="text-sm text-gray-500 mt-3">Loading menu...</p>
+          </div>
+        )}
 
-        {filtered.length === 0 && (
-          <p className="text-center text-gray-400 py-10">
-            Menu nggak ketemu 😅
-          </p>
+        {error && (
+          <div className="text-center py-10 bg-red-50 rounded-xl">
+            <p className="text-red-600 font-medium">⚠️ {error}</p>
+            <p className="text-xs text-red-500 mt-1">Cek koneksi MongoDB</p>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <>
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">
+              {filtered.length} menu tersedia
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              {filtered.map((p) => (
+                <div
+                  key={p._id}
+                  className="bg-white rounded-xl shadow-sm overflow-hidden flex flex-col"
+                >
+                  <div className="h-24 bg-orange-100 flex items-center justify-center text-5xl">
+                    {p.image}
+                  </div>
+                  <div className="p-3 flex-1 flex flex-col">
+                    <h4 className="font-semibold text-sm text-gray-800">
+                      {p.name}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">
+                      {p.description}
+                    </p>
+                    <div className="mt-auto pt-2 flex items-center justify-between">
+                      <span className="text-sm font-bold text-orange-600">
+                        {formatRupiah(p.price)}
+                      </span>
+                      <button
+                        onClick={() => addToCart(p)}
+                        className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold px-3 py-1.5 rounded-full transition"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {filtered.length === 0 && (
+              <p className="text-center text-gray-400 py-10">
+                Menu nggak ketemu 😅
+              </p>
+            )}
+          </>
         )}
       </main>
 
-      {/* Floating cart button (mobile) */}
+      {/* Floating cart button */}
       {totalItems > 0 && (
         <div className="fixed bottom-4 left-4 right-4 max-w-md mx-auto">
           <Link

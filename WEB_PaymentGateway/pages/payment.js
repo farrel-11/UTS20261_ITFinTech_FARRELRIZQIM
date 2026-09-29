@@ -48,24 +48,75 @@ export default function Payment() {
     setShowSheet(true);
   };
 
-  const handleFinishPayment = () => {
-    if (method === 'card') {
-      if (!card.number || !card.name || !card.expiry || !card.cvv) {
-        setToast({ message: 'Lengkapi data kartu dulu', type: 'error' });
-        return;
-      }
-      if (card.number.replace(/\s/g, '').length < 12) {
-        setToast({ message: 'Nomor kartu tidak valid', type: 'error' });
-        return;
-      }
+  const handleFinishPayment = async () => {
+  if (method === 'card') {
+    if (!card.number || !card.name || !card.expiry || !card.cvv) {
+      setToast({ message: 'Lengkapi data kartu dulu', type: 'error' });
+      return;
     }
+    if (card.number.replace(/\s/g, '').length < 12) {
+      setToast({ message: 'Nomor kartu tidak valid', type: 'error' });
+      return;
+    }
+  }
 
-    setProcessing(true);
-    setTimeout(() => {
-      const orderId = 'BC' + Date.now().toString().slice(-8);
-      router.push(`/success?orderId=${orderId}&total=${total}&method=${method}`);
-    }, 1500);
-  };
+  setProcessing(true);
+
+  try {
+    // Step 1: POST create checkout
+    const checkoutRes = await fetch('/api/checkouts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customerName: 'Guest', // nanti bisa dari form
+        shippingAddress: address,
+        items: cart.map((item) => ({
+          productId: item.id,
+          qty: item.qty,
+        })),
+      }),
+    });
+    const checkoutJson = await checkoutRes.json();
+    if (!checkoutJson.success) {
+      throw new Error(checkoutJson.error || 'Gagal bikin checkout');
+    }
+    const checkoutId = checkoutJson.data._id;
+
+    // Step 2: POST create payment
+    const paymentRes = await fetch('/api/payments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        checkoutId,
+        method,
+      }),
+    });
+    const paymentJson = await paymentRes.json();
+    if (!paymentJson.success) {
+      throw new Error(paymentJson.error || 'Gagal bikin payment');
+    }
+    const paymentId = paymentJson.data._id;
+
+    // Step 3 (SIMULASI): PATCH mark as paid
+    // NOTE: Nanti di nomor 4 (webhook Xendit), langkah ini dihapus
+    // karena status akan di-update otomatis oleh webhook
+    await fetch(`/api/payments/${paymentId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'paid' }),
+    });
+
+    // Redirect ke success dengan paymentId (bukan orderId lagi)
+    router.push(`/success?paymentId=${paymentId}`);
+  } catch (error) {
+    console.error('Payment error:', error);
+    setToast({ 
+      message: `Error: ${error.message}`, 
+      type: 'error' 
+    });
+    setProcessing(false);
+  }
+};
 
   const copyVA = () => {
     navigator.clipboard.writeText(vaNumber.replace(/\s/g, ''));
