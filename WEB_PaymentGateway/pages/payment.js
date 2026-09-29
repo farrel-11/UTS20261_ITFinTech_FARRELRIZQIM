@@ -63,57 +63,44 @@ export default function Payment() {
   setProcessing(true);
 
   try {
-    // Step 1: POST create checkout
+    // Step 1: Create checkout
     const checkoutRes = await fetch('/api/checkouts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        customerName: 'Guest', // nanti bisa dari form
+        customerName: 'Guest',
         shippingAddress: address,
-        items: cart.map((item) => ({
-          productId: item.id,
-          qty: item.qty,
-        })),
+        items: cart.map((item) => ({ productId: item.id, qty: item.qty })),
       }),
     });
     const checkoutJson = await checkoutRes.json();
-    if (!checkoutJson.success) {
-      throw new Error(checkoutJson.error || 'Gagal bikin checkout');
-    }
+    if (!checkoutJson.success) throw new Error(checkoutJson.error);
     const checkoutId = checkoutJson.data._id;
 
-    // Step 2: POST create payment
+    // Step 2: Create payment
     const paymentRes = await fetch('/api/payments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        checkoutId,
-        method,
-      }),
+      body: JSON.stringify({ checkoutId, method }),
     });
     const paymentJson = await paymentRes.json();
-    if (!paymentJson.success) {
-      throw new Error(paymentJson.error || 'Gagal bikin payment');
-    }
+    if (!paymentJson.success) throw new Error(paymentJson.error);
     const paymentId = paymentJson.data._id;
 
-    // Step 3 (SIMULASI): PATCH mark as paid
-    // NOTE: Nanti di nomor 4 (webhook Xendit), langkah ini dihapus
-    // karena status akan di-update otomatis oleh webhook
-    await fetch(`/api/payments/${paymentId}`, {
-      method: 'PATCH',
+    // Step 3: Create Xendit Invoice
+    const invoiceRes = await fetch('/api/xendit/create-invoice', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'paid' }),
+      body: JSON.stringify({ paymentId }),
     });
+    const invoiceJson = await invoiceRes.json();
+    if (!invoiceJson.success) throw new Error(invoiceJson.error);
 
-    // Redirect ke success dengan paymentId (bukan orderId lagi)
-    router.push(`/success?paymentId=${paymentId}`);
+    // Step 4: Redirect to Xendit hosted invoice page
+    window.location.href = invoiceJson.invoiceUrl;
   } catch (error) {
     console.error('Payment error:', error);
-    setToast({ 
-      message: `Error: ${error.message}`, 
-      type: 'error' 
-    });
+    setToast({ message: `Error: ${error.message}`, type: 'error' });
     setProcessing(false);
   }
 };
