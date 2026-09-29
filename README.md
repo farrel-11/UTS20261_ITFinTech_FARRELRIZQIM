@@ -6,7 +6,7 @@ UTS IT Financial Services - Prasetiya Mulya University
 
 ## 🔗 Links
 - **Live Demo:** https://uts-20261-it-fin-tech-farrelrizqim.vercel.app
-- **Video Demo:** Google Drive Link]](https://drive.google.com/drive/folders/1ppX9Icky1ZZraHKv1xiQqGab9WiKInFC?hl=ID
+- **Video Demo:** Google Drive Link https://drive.google.com/drive/folders/1ppX9Icky1ZZraHKv1xiQqGab9WiKInFC?hl=ID
 
 ## 🛠️ Tech Stack
 - Next.js 16 (Pages Router)
