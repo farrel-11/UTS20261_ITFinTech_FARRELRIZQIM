@@ -369,7 +369,7 @@ export default function Payment() {
                     ? `Bayar ${formatRupiah(total)}`
                     : method === 'va'
                       ? 'Konfirmasi Pembayaran'
-                      : 'Sudah Bayar ✓'}
+                      : 'Proses Pembayaran'}
               </button>
               <p className="text-xs text-gray-400 text-center mt-2">
                 
