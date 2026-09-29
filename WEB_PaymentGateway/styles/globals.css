@@ -1,26 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --bonechick-orange: #F97316;
+  --bonechick-orange-dark: #EA580C;
+  --bonechick-cream: #FFF8F0;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bonechick-cream);
+  color: #1f2937;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
+
+/* Animations for Toast & Bottom Sheet */
+@keyframes slideDown {
+  from { transform: translateY(-120%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-slideDown { animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-slideUp { animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.animate-fadeIn { animation: fadeIn 0.2s ease-out; }
