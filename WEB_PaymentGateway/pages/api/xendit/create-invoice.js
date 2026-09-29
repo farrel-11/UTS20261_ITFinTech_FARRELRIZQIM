@@ -1,6 +1,16 @@
 import dbConnect from '../../../lib/dbConnect';
 import Payment from '../../../models/Payment';
 
+// Mapping method BoneChick → method Xendit
+const methodMap = {
+  qris: ['QRIS'],
+  gopay: ['GOPAY'],
+  ovo: ['OVO'],
+  dana: ['DANA'],
+  card: ['CREDIT_CARD'],
+  va: ['BCA', 'BNI', 'BRI', 'MANDIRI', 'PERMATA'],
+};
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -22,6 +32,11 @@ export default async function handler(req, res) {
     const auth = Buffer.from(`${process.env.XENDIT_SECRET_KEY}:`).toString('base64');
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || `https://${req.headers.host}`;
 
+    // Filter payment methods sesuai pilihan user, fallback ke semua kalau method ga match
+    const allowedMethods = methodMap[payment.method] || [
+      'QRIS', 'GOPAY', 'OVO', 'DANA', 'CREDIT_CARD', 'BCA', 'BNI',
+    ];
+
     const xenditRes = await fetch('https://api.xendit.co/v2/invoices', {
       method: 'POST',
       headers: {
@@ -36,6 +51,7 @@ export default async function handler(req, res) {
         failure_redirect_url: `${baseUrl}/payment`,
         currency: 'IDR',
         invoice_duration: 3600,
+        payment_methods: allowedMethods,
       }),
     });
 
